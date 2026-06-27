@@ -1,0 +1,7 @@
+[
+  {
+    "name": "Generic API Key",
+    "pattern": "(?i)(?:api[_-]?key|api[_-]?secret)\\s*[:=]\\s*[\"'][^\"']{16,}[\"']",
+    "severity": "MEDIUM"
+  }
+]

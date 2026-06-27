@@ -1,0 +1,3 @@
+[
+ {"name":"AWS Access Key","pattern":"AKIA[0-9A-Z]{16}","severity":"HIGH"}
+]

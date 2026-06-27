@@ -1,0 +1,17 @@
+[
+  {
+    "name": "Mongo URI",
+    "pattern": "mongodb(?:\\+srv)?://[^ \\n]+",
+    "severity": "HIGH"
+  },
+  {
+    "name": "Postgres URI",
+    "pattern": "postgres(?:ql)?://[^ \\n]+",
+    "severity": "HIGH"
+  },
+  {
+    "name": "MySQL URI",
+    "pattern": "mysql://[^ \\n]+",
+    "severity": "HIGH"
+  }
+]

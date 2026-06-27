@@ -1,0 +1,10 @@
+__pycache__/
+*.pyc
+.vscode/
+.idea/
+.git/
+node_modules/
+vnv/
+dist/
+build/
+report.json
