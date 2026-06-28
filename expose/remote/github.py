@@ -14,10 +14,10 @@ def clone_repo(repo_url, dest_dir):
 
     print(f"[*] Cloning {clone_url} ...")
     result = subprocess.run(
-        ["git", "clone", "--depth", "1", clone_url, dest_dir],
+        ["git", "clone", "--depth", "1", "--single-branch", "--no-tags", clone_url, dest_dir],
         capture_output=True,
         text=True,
-        timeout=120,
+        timeout=300,
     )
 
     if result.returncode != 0:
