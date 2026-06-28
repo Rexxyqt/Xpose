@@ -1,7 +1,7 @@
 import os
-from core.detector import Detector
-from core.entropy import entropy
-from core.filesystem import walk_directory
+from expose.core.detector import Detector
+from expose.core.entropy import entropy
+from expose.core.filesystem import walk_directory
 
 class Scanner:
     def __init__(self, rules, ignore_patterns):

@@ -14,10 +14,10 @@ import colorama
 from colorama import Fore, Style
 colorama.init(autoreset=True)
 
-from core.scanner import Scanner
-from core.entropy import entropy
-from rules.loader import load_rules, load_ignore_patterns
-from core.tree import show_tree
+from expose.core.scanner import Scanner
+from expose.core.entropy import entropy
+from expose.rules.loader import load_rules, load_ignore_patterns
+from expose.core.tree import show_tree
 
 
 # ASCII art banner
@@ -32,17 +32,7 @@ ____  ___
 
 
 def parse_github_url(url):
-    """Parse GitHub URL to owner/repo format.
-
-    Args:
-        url (str): GitHub repository URL.
-
-    Returns:
-        str: Owner/Repository string.
-
-    Raises:
-        ValueError: If URL is not a valid GitHub repository URL.
-    """
+    """Parse GitHub URL to owner/repo format."""
     if url.endswith(".git"):
         url = url[:-4]
     url = url.rstrip("/")
@@ -64,18 +54,7 @@ def parse_github_url(url):
 
 
 def clone_repo(repo_url, dest_dir):
-    """Clone a public GitHub repository.
-
-    Args:
-        repo_url (str): GitHub repository URL.
-        dest_dir (str): Destination directory for cloning.
-
-    Returns:
-        str: Path to the cloned repository.
-
-    Raises:
-        RuntimeError: If git clone fails.
-    """
+    """Clone a public GitHub repository."""
     repo_path = parse_github_url(repo_url)
     clone_url = f"https://github.com/{repo_path}.git"
 
@@ -94,87 +73,52 @@ def clone_repo(repo_url, dest_dir):
     return dest_dir
 
 
+def _rules_dir():
+    base_dir = os.path.dirname(os.path.abspath(__file__))
+    return os.path.join(base_dir, "expose", "rules")
+
+
 def scan_path(path, rules, ignore_patterns):
-    """Scan a directory for secrets.
-
-    Args:
-        path (str): Path to directory to scan.
-        rules (dict): Rules dictionary with 'rules' key.
-        ignore_patterns (set): Set of directory names to ignore.
-
-    Returns:
-        list: List of findings.
-    """
+    """Scan a directory for secrets."""
     scanner = Scanner(rules, ignore_patterns)
     return scanner.scan(path)
 
 
 def run_local_scan(path):
-    """Convenience function for GUI: scan a local path and return findings.
-
-    Args:
-        path (str): Path to scan.
-
-    Returns:
-        list: Findings.
-    """
-    base_dir = os.path.dirname(os.path.abspath(__file__))
-    rules_dir = os.path.join(base_dir, "rules")
+    """Convenience function for scanning a local path."""
+    rules_dir = _rules_dir()
     rules = load_rules(rules_dir)
     ignore_patterns = load_ignore_patterns(rules_dir)
     return scan_path(path, rules, ignore_patterns)
 
 
-def run_remote_scan(url, show_tree=False):
-    """Convenience function for GUI: scan a remote GitHub repo.
-
-    Args:
-        url (str): GitHub repository URL.
-        show_tree (bool): If True, capture and return the tree output as a string.
-
-    Returns:
-        tuple: (findings list, tree_output or None)
-    """
+def run_remote_scan(url, show_tree_flag=False):
+    """Convenience function for scanning a remote GitHub repo."""
     tmpdir = tempfile.mkdtemp(prefix="secretscan_")
     tree_output = None
     try:
         clone_repo(url, tmpdir)
 
-        if show_tree:
-            # Capture stdout from show_tree
+        rules_dir = _rules_dir()
+        rules = load_rules(rules_dir)
+        ignore_patterns = load_ignore_patterns(rules_dir)
+
+        findings = scan_path(tmpdir, rules, ignore_patterns)
+
+        if show_tree_flag:
+            secret_files = {os.path.relpath(f["file"], tmpdir) for f in findings}
             old_stdout = sys.stdout
             sys.stdout = io.StringIO()
-
-            ignore_patterns = load_ignore_patterns(
-                os.path.join(os.path.dirname(os.path.abspath(__file__)), "rules")
-            )
-            from core.tree import show_tree as render_tree
-            render_tree(tmpdir, ignore_patterns)
-
+            show_tree(tmpdir, ignore_patterns, "", tmpdir, secret_files)
             tree_output = sys.stdout.getvalue()
             sys.stdout = old_stdout
 
-
-
-        base_dir = os.path.dirname(os.path.abspath(__file__))
-        rules_dir = os.path.join(base_dir, "rules")
-        rules = load_rules(rules_dir)
-        ignore_patterns = load_ignore_patterns(rules_dir)
-        findings = scan_path(tmpdir, rules, ignore_patterns)
         return findings, tree_output
     finally:
         pass
 
 
 def _print_report(findings, title="SecretScan Report", target=None, base_path=None):
-    """Print findings to console in a formatted way.
-
-    Args:
-        findings (list): List of finding dictionaries.
-        title (str): Title to display.
-        target (str, optional): Target URL or path.
-        base_path (str, optional): Base path to make file paths relative to.
-    """
     print("=" * 50)
     print(title)
     if target:
@@ -205,21 +149,13 @@ def _print_report(findings, title="SecretScan Report", target=None, base_path=No
 
 
 def _save_report(findings, output_file="report.json"):
-    """Save findings to a JSON file.
-
-    Args:
-        findings (list): List of finding dictionaries.
-        output_file (str): Output file path.
-    """
-    with open(output_file, "w") as f:
+    with open(output_file, "w", encoding="utf-8") as f:
         json.dump(findings, f, indent=2)
     print(f"Saved: {output_file}")
 
 
 def interactive_menu():
-    """Run an interactive text-based menu for the scanner."""
-    base_dir = os.path.dirname(os.path.abspath(__file__))
-    rules_dir = os.path.join(base_dir, "rules")
+    rules_dir = _rules_dir()
     rules = load_rules(rules_dir)
     ignore_patterns = load_ignore_patterns(rules_dir)
 
@@ -233,9 +169,7 @@ def interactive_menu():
         choice = input(Fore.CYAN + "Enter choice [1-4]: " + Style.RESET_ALL).strip()
 
         if choice == "1":
-            path = input(Fore.CYAN + "Enter path to scan (default .): " + Style.RESET_ALL).strip()
-            if not path:
-                path = "."
+            path = input(Fore.CYAN + "Enter path to scan (default .): " + Style.RESET_ALL).strip() or "."
             print(Fore.CYAN + f"\nScanning: {path}" + Style.RESET_ALL)
             findings = scan_path(path, rules, ignore_patterns)
             _print_report(findings, title="SecretScan Report")
@@ -248,37 +182,28 @@ def interactive_menu():
                 print(Fore.RED + "No URL provided." + Style.RESET_ALL)
                 continue
             show_tree_input = input(Fore.CYAN + "Show directory tree before scanning? (y/N): " + Style.RESET_ALL).strip().lower()
-            show_tree_flag = show_tree_input == "y" or show_tree_input == "yes"
+            show_tree_flag = show_tree_input in {"y", "yes"}
+
             tmpdir = tempfile.mkdtemp(prefix="secretscan_")
             try:
                 clone_repo(url, tmpdir)
-
-                # First, scan to get findings
                 findings = scan_path(tmpdir, rules, ignore_patterns)
 
                 if show_tree_flag:
                     print("\n" + "=" * 50)
                     print(" Repository Structure")
                     print("=" * 50)
-                    # Get the set of relative file paths that have secrets
-                    secret_files = set()
-                    for f in findings:
-                        rel_path = os.path.relpath(f["file"], tmpdir)
-                        secret_files.add(rel_path)
+                    secret_files = {os.path.relpath(f["file"], tmpdir) for f in findings}
                     show_tree(tmpdir, ignore_patterns, "", tmpdir, secret_files)
                     print()
 
-                _print_report(
-                    findings,
-                    title="SecretScan Report (Remote)",
-                    target=url,
-                    base_path=tmpdir,
-                )
+                _print_report(findings, title="SecretScan Report (Remote)", target=url, base_path=tmpdir)
                 _save_report(findings, output_file="report.json")
             except Exception as exc:
                 print(Fore.RED + f"[-] Error: {exc}" + Style.RESET_ALL)
             finally:
                 shutil.rmtree(tmpdir, ignore_errors=True)
+
             input(Fore.CYAN + "\nPress Enter to return to menu..." + Style.RESET_ALL)
 
         elif choice == "3":
@@ -301,25 +226,21 @@ def interactive_menu():
 
 
 def main():
-    """Entry point for the secret scanner CLI."""
     parser = argparse.ArgumentParser(prog="secretscan")
     subparsers = parser.add_subparsers(dest="command")
 
-    # Local scan
     scan_parser = subparsers.add_parser("scan")
     scan_parser.add_argument("path", nargs="?", default=".", help="Path to scan (default: current directory)")
 
-    # Remote scan - GitHub URL
     remote_parser = subparsers.add_parser("remote")
     remote_parser.add_argument("url", help="GitHub repository URL (e.g., https://github.com/owner/repo)")
     remote_parser.add_argument(
-        "--tree", action="store_true", help="Show directory structure (with secret files highlighted in red) after scanning"
+        "--tree", action="store_true", help="Show directory structure after scanning"
     )
 
     args = parser.parse_args()
 
-    base_dir = os.path.dirname(os.path.abspath(__file__))
-    rules_dir = os.path.join(base_dir, "rules")
+    rules_dir = _rules_dir()
     rules = load_rules(rules_dir)
     ignore_patterns = load_ignore_patterns(rules_dir)
 
@@ -327,39 +248,32 @@ def main():
         findings = scan_path(args.path, rules, ignore_patterns)
         _print_report(findings, title="SecretScan Report")
         _save_report(findings, output_file="report.json")
+
     elif args.command == "remote":
         tmpdir = tempfile.mkdtemp(prefix="secretscan_")
         try:
             clone_repo(args.url, tmpdir)
-
-            # First, scan to get findings
             findings = scan_path(tmpdir, rules, ignore_patterns)
 
             if args.tree:
                 print("\n" + "=" * 50)
                 print(" Repository Structure")
                 print("=" * 50)
-                secret_files = set()
-                for f in findings:
-                    rel_path = os.path.relpath(f["file"], tmpdir)
-                    secret_files.add(rel_path)
+                secret_files = {os.path.relpath(f["file"], tmpdir) for f in findings}
                 show_tree(tmpdir, ignore_patterns, "", tmpdir, secret_files)
                 print()
 
-            _print_report(
-                findings,
-                title="SecretScan Report (Remote)",
-                target=args.url,
-                base_path=tmpdir,
-            )
+            _print_report(findings, title="SecretScan Report (Remote)", target=args.url, base_path=tmpdir)
             _save_report(findings, output_file="report.json")
         except Exception as exc:
             print(f"[-] Error: {exc}")
         finally:
             shutil.rmtree(tmpdir, ignore_errors=True)
+
     else:
         interactive_menu()
 
 
 if __name__ == "__main__":
     main()
+
