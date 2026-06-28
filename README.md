@@ -28,9 +28,9 @@ Secret scanner that walks a directory (or a cloned GitHub repo) and matches conf
 2. Install **Python 3.8+**
    - https://www.python.org/downloads/windows/
 
-3. Install dependencies
+3. Setup
    ```bat
-   cd /d "c:\Users\rexje\OneDrive\Documents\Xpose"
+   git clone https://github.com/Rexxyqt/Xpose.git
    pip install -r expose\requirements.txt
    ```
 
@@ -57,16 +57,10 @@ python -u xpose.py remote https://github.com/user/repo --tree
 Each run writes findings to:
 - **`report.json`** in the current working directory.
 
-## Troubleshooting
-### `ModuleNotFoundError: No module named 'xpose.core'; 'xpose' is not a package`
-This happens when the script tries to import using the wrong package name. In this project, modules are under the **`expose/`** directory.
 
 ✅ Use the provided entrypoint:
 ```bat
 python -u xpose.py scan .
 ```
 
-## Notes
-- Scanning includes any readable files under the target path.
-- Unreadable files are skipped silently.
 
