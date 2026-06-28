@@ -9,58 +9,64 @@ ____  ___
       \_/|__|                \/      \/ 
 ```
 
-## Setup (Windows & Linux)
+Secret scanner that walks a directory (or a cloned GitHub repo) and matches configured regex rules.
 
-1. **Install Git** (if not already installed)  
-   - Windows: https://git-scm.com/download/win  
-   - Linux: `sudo apt-get install git` (Debian/Ubuntu) or equivalent for your distro.
+**What is this for?**
+- Helps find potential **secrets** in your codebase (e.g., API keys, DB credentials, etc.).
+- Scans a local folder or a remote GitHub repo and generates a **report.json** of findings.
 
-2. **Clone the repository**  
-   ```bash
-   git clone https://github.com/yourusername/Expose.git   # replace with actual repo URL
-   cd Expose
+
+
+## Project layout (important)
+- Entrypoint script: **`xpose.py`** (at repo root)
+- Rules live under: **`expose/rules/`**
+
+## Setup (Windows)
+1. Install **Git** (if needed)
+   - https://git-scm.com/download/win
+
+2. Install **Python 3.8+**
+   - https://www.python.org/downloads/windows/
+
+3. Install dependencies
+   ```bat
+   cd /d "c:\Users\rexje\OneDrive\Documents\Xpose"
+   pip install -r expose\requirements.txt
    ```
-
-3. **Install Python 3.8+**  
-   - Windows: https://www.python.org/downloads/windows/  
-   - Linux: usually pre‑installed; otherwise `sudo apt-get install python3`.
-
-4. **Install required Python packages**  
-   ```bash
-   pip install -r requirements.txt
-   ```
-   (`requirements.txt` contains `colorama` and `requests`.)
 
 ## Running the tool
-
 ### Interactive menu (recommended)
-
-```bash
-python expose.py
+```bat
+python -u xpose.py
 ```
-You will see the ASCII banner above and a menu:
-```
-Select an option:
-  1) Scan Local Directory
-  2) Scan Remote GitHub
-  3) Help
-  4) Exit
-Enter choice [1-4]:
-```
-- Choose **1** to scan a local folder (enter path or press Enter for `.`).
-- Choose **2** to scan a remote GitHub repo (enter URL, then answer y/N to show the directory tree first).
 
 ### Direct CLI commands
-
-```bash
-# Scan a local directory (Windows PowerShell / CMD or Linux bash)
-python expose.py scan               # scans current directory (.)
-python expose.py scan C:\path\to\dir   # Windows example
-python expose.py scan /path/to/dir     # Linux example
-
-# Scan a remote GitHub repository
-python expose.py remote https://github.com/user/repo
-python expose.py remote https://github.com/user/repo --tree   # show tree before scanning
+Local scan:
+```bat
+python -u xpose.py scan .
+python -u xpose.py scan C:\path\to\dir
 ```
 
-After each scan, a `report.json` file is written in the current directory.
+Remote scan (GitHub):
+```bat
+python -u xpose.py remote https://github.com/user/repo
+python -u xpose.py remote https://github.com/user/repo --tree
+```
+
+### Output
+Each run writes findings to:
+- **`report.json`** in the current working directory.
+
+## Troubleshooting
+### `ModuleNotFoundError: No module named 'xpose.core'; 'xpose' is not a package`
+This happens when the script tries to import using the wrong package name. In this project, modules are under the **`expose/`** directory.
+
+✅ Use the provided entrypoint:
+```bat
+python -u xpose.py scan .
+```
+
+## Notes
+- Scanning includes any readable files under the target path.
+- Unreadable files are skipped silently.
+
